@@ -34,7 +34,7 @@ for (int c = 0; c < planes; c++)
         for (size_t i = 0; i < contours.size(); i++) {
             approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
 
-            if(approx.size() == 4 && fabs(contourArea(Mat(approx))) > 1000 && isContourConvex(Mat(approx))) {
+            if(approx.size() == 4 && fabs(contourArea(Mat(approx))) > 1000 && isContourConvex(Mat(approx))) {//triangle recognition approx.size() == 3
                 double maxCosine = 0;
 
                 for (int j = 2; j < 5; j++) {
