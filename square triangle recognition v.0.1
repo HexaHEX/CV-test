@@ -1,0 +1,49 @@
+static void getSquares(const Mat& image, vector<vector<Point>>& triangles)
+{
+squares.clear();
+
+Mat pyr, timg, gray0(image.size(), CV_8U), gray;
+
+pyrDown(image, pyr, Size(image.cols/2, image.rows/2));
+pyrUp(pyr, timg, image.size());
+vector<vector<Point> > contours;
+
+int planes = 1;
+int canny = 0;
+
+if (accuracy) {
+    planes = 4;
+    canny = 1;
+}
+
+for (int c = 0; c < planes; c++)
+{
+    int ch[] = {c, 0};
+    mixChannels(&timg, 1, &gray0, 1, ch, 1);
+
+    for (int l = 0; l < N; l++) {
+        if (l == 0 && canny == 1) {
+            Canny(gray0, gray, 0, thresh, 5);
+            dilate(gray, gray, Mat(), Point(-1,-1));
+        } else gray = gray0 >= (l+1)*255/N;
+
+        findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+
+        vector<Point> approx;
+
+        for (size_t i = 0; i < contours.size(); i++) {
+            approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
+
+            if(approx.size() == 4 && fabs(contourArea(Mat(approx))) > 1000 && isContourConvex(Mat(approx))) {//triangle recognition approx.size() == 3
+                double maxCosine = 0;
+
+                for (int j = 2; j < 5; j++) {
+                    double cosine = fabs(angle(approx[j%4], approx[j-2], approx[j-1]));
+                    maxCosine = MAX(maxCosine, cosine);
+                }
+
+                if (maxCosine < tolerance) squares.push_back(approx);
+            }
+        }
+    }
+}
