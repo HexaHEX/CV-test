@@ -1,9 +1,6 @@
-http://opencv-srf.blogspot.ru/2011/09/object-detection-tracking-using-contours.html
+// get from http://opencv-srf.blogspot.ru/2011/09/object-detection-tracking-using-contours.html
 
-#include "stdafx.h"
-#include <cv.h>
-#include <highgui.h>
-using namespace std;
+
 
 int main()
 {
