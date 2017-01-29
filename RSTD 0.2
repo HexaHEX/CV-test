@@ -1,0 +1,208 @@
+//
+// поиск кругов на изображении
+// по отношению площади контура к квадрату его длины
+//
+//
+// http://robocraft.ru
+//
+
+#include <opencv2/core/core.hpp> 
+#include <opencv2/opencv.hpp> 
+#include <opencv2/highgui/highgui.hpp> 
+#include <iostream> 
+#include <cv.h>
+#include <string>
+using namespace std;
+		int counts =0;
+		int counttr = 0;
+		int countr = 0;
+//  находит и показывает круги на изображении
+void findCircles(IplImage* _image)
+{
+        assert(_image!=0);
+
+        IplImage* bin = cvCreateImage( cvGetSize(_image), IPL_DEPTH_8U, 1);
+
+        // конвертируем в градации серого
+        cvConvertImage(_image, bin, CV_BGR2GRAY);
+        // находим границы
+        cvCanny(bin, bin, 50, 200);
+
+        cvNamedWindow( "bin", CV_WINDOW_NORMAL );
+        cvShowImage("bin", bin);
+
+        // хранилище памяти для контуров
+        CvMemStorage* storage = cvCreateMemStorage(0);
+        CvSeq* contours=0;
+
+        // находим контуры
+        int contoursCont = cvFindContours( bin, storage,&contours,sizeof(CvContour),CV_RETR_LIST,CV_CHAIN_APPROX_SIMPLE,cvPoint(0,0));
+
+       // assert(contours!=0);
+
+        // обходим все контуры
+        for( CvSeq* current = contours; current != NULL; current = current->h_next ){
+                // вычисляем площадь и периметр контура
+                double area = fabs(cvContourArea(current));
+                double perim = cvContourPerimeter(current);
+
+                // 1/4*CV_PI = 0,079577
+                if ( area / (perim * perim) > 0.065 && area / (perim * perim)< 0.1 ){ // в 10% интервале
+                        // нарисуем контур
+                        cvDrawContours(_image, current, cvScalar(0, 0, 255), cvScalar(0, 255, 0), -1, 20, 20);
+						countr++;
+                }
+        }
+
+        // освобождаем ресурсы
+        cvReleaseMemStorage(&storage);
+        cvReleaseImage(&bin);
+}
+
+int main(int argc, char* argv[])
+{
+		
+        IplImage *src=0, *dst=0;
+
+		//IplImage* statics = cvCreateImage(cvSize(400, 400), 8, 3);cvSet(hw,cvScalar(0,0,0));
+		CvFont font;
+		int x =400;
+		int y = 400;
+		CvPoint  s  = cvPoint(400,400);
+		// cvInitFont( &font, CV_FONT_HERSHEY_COMPLEX,1.0, 1.0, 0, 1, CV_AA);
+        // используя шрифт выводим на картинку текст
+       
+		
+        // имя картинки задаётся первым параметром
+        char* filename = argc >= 2 ? argv[1] : "Image1.jpg";
+        // получаем картинку
+        src = cvLoadImage(filename, 1);
+
+        //printf("[i] image: %s\n", filename);
+        assert( src != 0 );
+
+        // покажем изображение
+        //cvNamedWindow( "original", 1 );
+        //cvShowImage( "original", src );
+
+        dst = cvCloneImage(src);
+		/*float  kernel[9];
+
+	    kernel[0]=-0.1;
+        kernel[1]=0.2;
+        kernel[2]=-0.1;
+
+        kernel[3]=0.2;
+        kernel[4]=0.5;
+        kernel[5]=0.2;
+
+        kernel[6]=-0.1;
+        kernel[7]=0.2;
+        kernel[8]=-0.1;//свертка 
+		 CvMat kernel_matrix=cvMat(3,3,CV_32FC1,kernel);
+
+        // накладываем фильтр
+        //cvFilter2D(src, dst, &kernel_matrix, cvPoint(-1,-1));*//
+  
+		
+
+		
+	  //converting the original image into grayscale
+	 IplImage* imgGrayScale = cvCreateImage(cvGetSize(dst), 8, 1); 
+	 cvCvtColor(dst,imgGrayScale,CV_BGR2GRAY);
+
+	  //thresholding the grayscale image to get better results
+	 cvThreshold(imgGrayScale,imgGrayScale,128,255,CV_THRESH_BINARY);  
+ 
+	 CvSeq* contours;  //hold the pointer to a contour in the memory block
+	 CvSeq* result;   //hold sequence of points of a contour
+	 CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+ 
+	 //finding all contours in the image
+	 cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+
+		//iterating through each contour
+	 while(contours)
+	 {
+		 //obtain a sequence of points of contour, pointed by the variable 'contour'
+		 result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, cvContourPerimeter(contours)*0.02, 0);
+           
+		 //if there are 3  vertices  in the contour(It should be a triangle)
+		if(result->total==3 )
+		 {
+			 //iterating through each point
+			 CvPoint *pt[3];
+			 for(int i=0;i<3;i++){
+				 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+			 }
+   
+			 //drawing lines around the triangle
+			 cvLine(dst, *pt[0], *pt[1], cvScalar(255,0,0),4);
+			 cvLine(dst, *pt[1], *pt[2], cvScalar(255,0,0),4);
+			 cvLine(dst, *pt[2], *pt[0], cvScalar(255,0,0),4);
+			counttr++;
+		 }
+
+		  //if there are 4 vertices in the contour(It should be a quadrilateral)
+		 else if(result->total==4 )
+		 {
+			 //iterating through each point
+			 CvPoint *pt[4];
+			 for(int i=0;i<4;i++){
+				 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+			 }
+   
+			 //drawing lines around the quadrilateral
+			 cvLine(dst, *pt[0], *pt[1], cvScalar(0,255,0),4);
+			 cvLine(dst, *pt[1], *pt[2], cvScalar(0,255,0),4);
+			 cvLine(dst, *pt[2], *pt[3], cvScalar(0,255,0),4);
+			 cvLine(dst, *pt[3], *pt[0], cvScalar(0,255,0),4);  
+			 counts++;
+			
+
+		 }
+
+	   //if there are 7  vertices  in the contour(It should be a heptagon)
+		 else if(result->total ==7  )
+		 {
+			 //iterating through each point
+			 CvPoint *pt[7];
+			 for(int i=0;i<7;i++){
+				 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+			 }
+   
+			 //drawing lines around the heptagon
+			 cvLine(dst, *pt[0], *pt[1], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[1], *pt[2], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[2], *pt[3], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[3], *pt[4], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[4], *pt[5], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[5], *pt[6], cvScalar(0,0,255),4);
+			 cvLine(dst, *pt[6], *pt[0], cvScalar(0,0,255),4);
+		 }
+		 
+		  //obtain the next contour
+		 contours = contours->h_next; 
+	 }
+
+        // находим круги на изображении
+        findCircles(dst);
+		//char text = counts -'0';
+		
+		// cvPutText(hw, text ,s , &font, CV_RGB(150, 0, 150) );
+
+        cvNamedWindow( "circles", CV_WINDOW_NORMAL );
+        cvShowImage( "circles", dst);
+		cout << counts ;
+	//	cvNamedWindow("Data", 0);
+		//cvShowImage("Data", hw);
+        // ждём нажатия клавиши
+        cvWaitKey(0);
+
+        // освобождаем ресурсы
+        //cvReleaseImage(&src);
+        cvReleaseImage(&dst);
+        // удаляем окна
+        cvDestroyAllWindows();
+	   return 0;
+}
