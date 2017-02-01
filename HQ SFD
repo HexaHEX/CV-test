@@ -2,7 +2,7 @@
 #include <highgui.h>
 #include <math.h>
 
-
+http://opencvexamples.blogspot.com/2013/10/2d-convolution-creating-new-filter.html
 void bins(IplImage* _image)
 {
         assert(_image!=0);
