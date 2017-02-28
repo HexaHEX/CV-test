@@ -1,0 +1,471 @@
+#include <cv.h>
+#include <highgui.h>
+#include <math.h>
+#include <iostream>     // std::cout
+#include <algorithm>    // std::swap
+#include <vector> 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+using namespace cv;
+using namespace std;
+
+void thr(IplImage * _image);
+void ash(IplImage * _image ,IplImage * _image1,IplImage * _image2);
+void bins(IplImage* _image){
+        assert(_image!=0);
+        IplImage* bin = cvCreateImage( cvGetSize(_image), IPL_DEPTH_8U, 1);
+        cvConvertImage(_image, bin, CV_BGR2GRAY);
+        cvCanny(bin, bin, 50, 200);
+        cvNamedWindow( "bin", CV_WINDOW_NORMAL );
+        cvShowImage("bin", bin);
+        // хранилище памяти для контуров
+        CvMemStorage* storage = cvCreateMemStorage(0);
+        CvSeq* contours=0;
+        // находим контуры
+        int contoursCont = cvFindContours( bin, storage,&contours,sizeof(CvContour),CV_RETR_LIST,CV_CHAIN_APPROX_SIMPLE,cvPoint(0,0));
+       // assert(contours!=0);
+        // обходим все контуры
+        ///for( CvSeq* current = contours; current != NULL; current = current->h_next ){
+                // вычисляем площадь и периметр контура
+            //    double area = fabs(cvContourArea(current));
+            //    double perim = cvContourPerimeter(current);
+                // 1/4*CV_PI = 0,079577
+                //if ( area / (perim * perim) > 0.065 && area / (perim * perim)< 0.1 ){ // в 10% интервале
+                        // нарисуем контур
+                      //  cvDrawContours(_image, current, cvScalar(0, 0, 255), cvScalar(0, 255, 0), -1, 20, 20);
+						//countr++;
+               // }
+       // }
+        // освобождаем ресурсы
+        cvReleaseMemStorage(&storage);
+        cvReleaseImage(&bin);
+}
+
+
+
+int main(int argc, char* argv[]) 
+{
+	
+		IplImage  *dst=0;
+        IplImage* image = 0;
+        char* filename = argc >= 2 ? argv[1] : "e2.jpg";
+        image = cvLoadImage(filename, CV_LOAD_IMAGE_GRAYSCALE);
+        printf("[i] image: %s\n", filename);
+        assert( image != 0 );
+        IplImage* src = cvLoadImage(filename); 
+		IplImage* src2 = cvCloneImage(src);
+		IplImage* src3 = cvCloneImage(src);
+		float  kernel[9];
+	    kernel[0]=-0.1;
+        kernel[1]=0.2;
+        kernel[2]=-0.1;
+        kernel[3]=0.2;
+        kernel[4] = 1.1;
+        kernel[5]=0.2;
+        kernel[6]=-0.1;
+        kernel[7]=0.2;
+        kernel[8]=-0.1;
+		CvMat kernel_matrix=cvMat(3,3,CV_32FC1,kernel);
+        // накладываем фильтр
+       // cvFilter2D(src, src, &kernel_matrix, cvPoint(-1,-1));
+		//cvSmooth(src, src, CV_GAUSSIAN, 5, 5 );
+		//cvSmooth(src,src,CV_MEDIAN,5,5);
+		//cvSmooth(src, src, CV_GAUSSIAN, 5, 5 );
+		//cvSmooth(src, src, CV_GAUSSIAN, 5, 5 );
+		//cvSmooth(src,src,CV_MEDIAN,5,5);
+        IplImage* imgGrayScale = cvCreateImage(cvGetSize(src), 8, 1); 
+		 cvCvtColor(src,imgGrayScale,CV_BGR2GRAY);
+	  //thresholding the grayscale image to get better results
+		cvThreshold(imgGrayScale,imgGrayScale,128,255,CV_THRESH_BINARY);  
+		CvSeq* contours;  //hold the pointer to a contour in the memory block
+		CvSeq* result;   //hold sequence of points of a contour
+		CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+	    cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+	 
+		 
+
+		bins(src);
+		ash(src,src2,src3);
+        cvSmooth(image, image, CV_GAUSSIAN, 5, 5 );
+        CvSeq* results = cvHoughCircles( image, storage, CV_HOUGH_GRADIENT, 1.7,image->width/4); 
+        for( int i = 0; i < results->total; i++ ) {
+                float* p = (float*) cvGetSeqElem( results, i );
+                CvPoint pt = cvPoint( cvRound( p[0] ), cvRound( p[1] ) );
+				/* CvMoments m;
+					cvMoments(p,&m);
+					int x = m.m10/m.m00;
+					int y = m.m01/m.m00;
+					 CvPoint pr;
+						 pr.x=x;
+						 pr.y = y;
+						Scalar color = Scalar( 0,1000,250);//mass center
+						cvCircle(image,pr,4,color,4,10,0);*/
+                cvCircle( src, pt, cvRound( p[2] ), CV_RGB(0,1000,0),5,120,0 );
+        }
+		
+        cvNamedWindow( "cvHoughCircles", CV_WINDOW_NORMAL );
+        cvShowImage( "cvHoughCircles", src);
+
+        cvWaitKey(0);
+        cvReleaseMemStorage(&storage);
+        cvReleaseImage(& image);
+        cvReleaseImage(&src);
+        cvDestroyAllWindows();
+        return 0;
+}
+
+void ash(IplImage * _image,IplImage* _image1,IplImage *_image2){
+		IplImage * clone =  _image;
+		CvSize img = cvGetSize(_image1);
+		if(img.height > 1000 && img.width > 1000 ){
+		float  kernel[9];
+	    kernel[0]=-0.01;
+        kernel[1]=0.2;
+        kernel[2]=-0.01;
+        kernel[3]=0.1;
+        kernel[4] = 1.1;
+        kernel[5]=0.1;
+        kernel[6]=-0.01;
+        kernel[7]=0.2;
+        kernel[8]=-0.01;
+		 CvMat kernel_matrix=cvMat(3,3,CV_32FC1,kernel);
+        // накладываем фильтр
+        //cvFilter2D(_image1, _image1, &kernel_matrix, cvPoint(-1,-1));
+		}
+		cvSmooth(_image1, _image1, CV_GAUSSIAN, 5, 5 );
+		cvSmooth(_image1,_image1,CV_MEDIAN,5,5);
+		cvSmooth(_image1, _image1, CV_GAUSSIAN, 5, 5 );
+		int cos =0;
+		int csq[10];
+		float coeffs[10];
+		float  kernel[9];
+	    kernel[0]=-0.01;
+        kernel[1]=0.2;
+        kernel[2]=-0.01;
+        kernel[3]=0.1;
+        kernel[4] = 1.1;
+        kernel[5]=0.1;
+        kernel[6]=-0.01;
+        kernel[7]=0.2;
+        kernel[8]=-0.01;
+		 if(img.height > 1000 && img.width > 1000 ){//sizelimit
+		for(int i = 0;i<7;i++){
+        IplImage* imgGrayScale = cvCreateImage(cvGetSize(_image1), 8, 1); 
+		 cvCvtColor(_image1,imgGrayScale,CV_BGR2GRAY);
+		cvThreshold(imgGrayScale,imgGrayScale,128,255,CV_THRESH_BINARY);  
+		CvSeq* contours;  
+		CvSeq* result;   //hold sequence of points of a contour
+		CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+		cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+		while(contours)
+		 {
+			result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, cvContourPerimeter(contours)*0.02, 0);       
+			if(result->total==3 )
+			 {
+				 CvPoint *pt[3];
+				 for(int i=0;i<3;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if((abs(pt[0]->x -pt[1]->x) > 3  && abs(pt[0]->y -pt[2]->y) > 3)  || (abs(pt[0]->x -pt[2]->x) > 3  && abs(pt[0]->y -pt[1]->y) > 3 ) ){
+				 
+				 cos++;
+				 }
+
+			 }
+			if(result->total==4 )
+			 {
+			
+				 CvPoint *pt[4];
+				 for(int i=0;i<4;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if(    ( abs(pt[0]->x   - pt[3]->x )> 3 && abs(pt[1]->x - pt[2]->x) > 3  && abs(pt[0]->x - pt[2]->x) > 3 && abs(pt[1]->x - pt[3]->x) > 3 && (abs(pt[0]->y   - pt[3]->y)  < 2   || abs(pt[1]->y   - pt[2]->y)  < 2)  )  
+					 || 
+					 (abs(pt[0]->y   - pt[3]->y )> 3 && abs(pt[1]->y - pt[2]->y) > 3   && abs(pt[0]->y - pt[2]->y) > 3 && abs(pt[1]->y - pt[3]->y) > 3 && (abs(pt[1]->x   - pt[2]->x)  < 2  || abs(pt[0]->x   - pt[3]->x))  < 2 )     ){
+				 
+				 cos++;
+				 }
+			 }
+			 
+			contours = contours->h_next; 
+			 }
+		
+			csq[i] = cos;
+			 kernel[4] -= 0.1;
+			 coeffs[i]=kernel[4];
+			 cos=0;
+			 CvMat kernel_matrix=cvMat(3,3,CV_32FC1,kernel);
+      
+			 cvFilter2D(_image1, _image1, &kernel_matrix, cvPoint(-1,-1));
+		}//end of searhing 
+
+		
+			int iter = 0;
+			int maxp =0;
+			float maxc = 0;
+			for(int i = 0;i<7;i++){
+				for(int j=0;j<7;j++){
+					if(csq[j] > maxp){
+						maxp = csq[j];
+						maxc = coeffs[j];
+					}
+			}
+		 }
+
+			std::cout <<maxp << " " << maxc;
+			//if(maxp  !=1)
+			kernel[4] = 0.87; 
+			//else {
+			//	kernel[4] = 0.43;
+				//std::cout <<"2nd protocol";
+			//}
+			
+			CvMat kernel_matrix=cvMat(3,3,CV_32FC1,kernel);
+			cvFilter2D(_image2, _image2, &kernel_matrix, cvPoint(-1,-1));
+			cvSmooth(_image2, _image2, CV_GAUSSIAN, 5, 5 );
+			cvSmooth(_image2,_image2,CV_MEDIAN,5,5);
+			cvSmooth(_image2, _image2, CV_GAUSSIAN, 5, 5 );
+			cvSmooth(_image2,_image2,CV_MEDIAN,5,5);
+			cvSmooth(_image2, _image2, CV_GAUSSIAN, 5, 5 );
+			IplImage* imgGrayScale = cvCreateImage(cvGetSize(_image2), 8, 1); 
+			 cvCvtColor(_image2,imgGrayScale,CV_BGR2GRAY);
+			 //thresholding the grayscale image to get better results
+			cvThreshold(imgGrayScale,imgGrayScale,128,255,CV_THRESH_BINARY);  
+			CvSeq* contours;  //hold the pointer to a contour in the memory block
+			CvSeq* result;   //hold sequence of points of a contour
+			CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+			cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+			while(contours)
+			 {
+				result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, cvContourPerimeter(contours)*0.02, 0);       
+				if(result->total==3 )
+				{
+				 CvPoint *pt[3];
+				 for(int i=0;i<3;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if(abs(pt[0]->x -pt[1]->x) > 1  ){
+					CvMoments m;
+					cvMoments(contours,&m);
+					int x = m.m10/m.m00;
+					int y = m.m01/m.m00;
+					CvPoint p;
+					p.x=x;
+					p.y=y;
+					Scalar color = Scalar( 10,1000,0);
+					//mass center
+					cvCircle(_image,p,4,color,20,13,0);
+				 cvLine(_image, *pt[0], *pt[1], cvScalar(10,1000,0),3);
+				 cvLine(_image, *pt[1], *pt[2], cvScalar(10,1000,0),3);
+				 cvLine(_image, *pt[2], *pt[0], cvScalar(10,1000,0),3);
+				// cos++;
+				 }
+
+			 }
+			if(result->total==4 )
+			 {
+			
+				 CvPoint *pt[4];
+				 for(int i=0;i<4;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+
+			 if(   (abs(pt[0]->x   - pt[3]->x )> 3 && abs(pt[1]->x - pt[2]->x) > 3     )   || (abs(pt[0]->y   - pt[3]->y )> 3 && abs(pt[1]->y - pt[2]->y) > 3  )   ){
+				//if(    ( abs(pt[0]->x   - pt[3]->x )> 2 && abs(pt[1]->x - pt[2]->x) > 2  && abs(pt[0]->x - pt[2]->x) > 1 && abs(pt[1]->x - pt[3]->x) > 1 && abs(pt[0]->y   - pt[3]->y)  < 5    )  
+				//	 || 
+					// (abs(pt[0]->y   - pt[3]->y )> 2 && abs(pt[1]->y - pt[2]->y) > 2   && abs(pt[0]->y - pt[2]->y) > 1 && abs(pt[1]->y - pt[3]->y) > 1 && abs(pt[1]->x   - pt[2]->x)  < 5  )    ){
+					CvMoments m;
+					cvMoments(contours,&m);
+					int x = m.m10/m.m00;
+					int y = m.m01/m.m00;
+					 CvPoint p;
+						 p.x=x;
+						 p.y=y;
+						Scalar color = Scalar( 0,0,250);//mass center
+						cvCircle(_image,p,4,color,20,10,0);
+				 cvLine(_image, *pt[0], *pt[1], cvScalar(0,0,250),3);
+				 cvLine(_image ,*pt[1], *pt[2], cvScalar(0,0,250),3);
+				 cvLine(_image, *pt[2], *pt[3], cvScalar(0,0,250),3);
+				 cvLine(_image, *pt[3], *pt[0], cvScalar(0,0,250),3);
+				
+				 }
+			 }
+			 if(result->total ==6  )
+			 {
+				 CvPoint *pt[6];
+				 for(int i=0;i<6;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if(   (abs(pt[0]->y - pt[3]->y) > 2 && abs(pt[1]->y - pt[2]->y) > 2  ) ||  ( abs(pt[0]->x - pt[3]->x) > 1  &&  abs(pt[2]->x - pt[1]->x ) > 1 ) ){
+				 /*cvLine(_image, *pt[0], *pt[1], cvScalar(255,70,255),3);
+				 cvLine(_image, *pt[1], *pt[2], cvScalar(255,70,255),3);
+				 cvLine(_image, *pt[2], *pt[3], cvScalar(255,70,255),3);
+				 cvLine(_image, *pt[3], *pt[4], cvScalar(250,70,255),3);
+				 cvLine(_image, *pt[4], *pt[5], cvScalar(250,70,255),3);
+				 cvLine(_image, *pt[5], *pt[0], cvScalar(250,70,255),3);*/
+				 }
+				}
+			contours = contours->h_next; 
+			 }
+
+
+		}
+		//size limit 
+		else {
+		cout << "small  size";
+		cvSmooth(_image2, _image2, CV_GAUSSIAN, 5, 5 );
+		cvSmooth(_image2,_image2,CV_MEDIAN,5,5);
+		cvSmooth(_image2, _image2, CV_GAUSSIAN, 5, 5 );
+			IplImage* imgGrayScale = cvCreateImage(cvGetSize(_image2), 8, 1); 
+		 cvCvtColor(_image2,imgGrayScale,CV_BGR2GRAY);
+		 //thresholding the grayscale image to get better results
+		cvThreshold(imgGrayScale,imgGrayScale,128,255,CV_THRESH_BINARY);  
+		CvSeq* contours;  //hold the pointer to a contour in the memory block
+		CvSeq* result;   //hold sequence of points of a contour
+		CvMemStorage *storage = cvCreateMemStorage(0); //storage area for all contours
+		cvFindContours(imgGrayScale, storage, &contours, sizeof(CvContour), CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+		while(contours)
+		 {
+			result = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, cvContourPerimeter(contours)*0.02, 0);   
+			
+		CvMoments m;
+		 cvMoments(contours,&m);
+		 
+		 int x = m.m10/m.m00;
+		 int y = m.m01/m.m00;
+		 CvPoint p;
+		 p.x=x;
+		 p.y=y;
+		 Scalar color = Scalar( 250,250,250);//mass center
+		 cvCircle(_image,p,4,color,-1,8,0);
+
+			if(result->total==3 )
+			 {
+				 CvPoint *pt[3];
+				 for(int i=0;i<3;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if(abs(pt[0]->x -pt[1]->x) > 1  ){
+				 cvLine(_image, *pt[0], *pt[1], cvScalar(255,0,0),3);
+				 cvLine(_image, *pt[1], *pt[2], cvScalar(255,0,0),3);
+				 cvLine(_image, *pt[2], *pt[0], cvScalar(255,0,0),3);
+					/*CvMoments m;
+					cvMoments(contours,&m);
+					int x = m.m10/m.m00;
+					int y = m.m01/m.m00;
+					 CvPoint p;
+						 p.x=x;
+						 p.y=y;
+						Scalar color = Scalar( 1000,70,250);//mass center
+						cvCircle(_image,p,4,color,4,10,0);
+						*/
+				 // cos++;
+				 }
+
+			 }
+			if(result->total==4 )
+			 {
+			
+				 CvPoint *pt[4];
+				 for(int i=0;i<4;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if( ( pt[0]->x  + pt[0]->y )> 5  &&   (abs(pt[0]->x   - pt[3]->x )> 1 && abs(pt[1]->x - pt[2]->x) > 1     )   || (abs(pt[0]->y   - pt[3]->y )> 1 && abs(pt[1]->y - pt[2]->y) > 1  )   ){
+				 cvLine(_image, *pt[0], *pt[1], cvScalar(0,0,250),3);
+				 cvLine(_image ,*pt[1], *pt[2], cvScalar(0,0,250),3);
+				 cvLine(_image, *pt[2], *pt[3], cvScalar(0,0,250),3);
+				 cvLine(_image, *pt[3], *pt[0], cvScalar(0,0,250),3);
+					/*CvMoments m;
+					cvMoments(contours,&m);
+					int x = m.m10/m.m00;
+					int y = m.m01/m.m00;
+					 CvPoint p;
+						 p.x=x;
+						 p.y=y;
+						Scalar color = Scalar( 1000,70,250);//mass center
+						cvCircle(_image,p,4,color,4,10,0);*/
+
+
+				 // cos++;
+				 }
+			 }
+			 if(result->total ==6  )
+			 {
+				 CvPoint *pt[6];
+				 for(int i=0;i<6;i++){
+					 pt[i] = (CvPoint*)cvGetSeqElem(result, i);
+				 }
+				 if(   (abs(pt[0]->y - pt[3]->y) > 3 && abs(pt[1]->y - pt[2]->y) > 3  ) ||  ( abs(pt[0]->x - pt[3]->x) > 1  &&  abs(pt[2]->x - pt[1]->x ) > 1 ) ){
+				// cvLine(_image, *pt[0], *pt[1], cvScalar(255,0,255),3);
+				// cvLine(_image, *pt[1], *pt[2], cvScalar(255,0,255),3);
+				// cvLine(_image, *pt[2], *pt[3], cvScalar(255,0,255),3);
+				// cvLine(_image, *pt[3], *pt[4], cvScalar(250,0,255),3);
+				// cvLine(_image, *pt[4], *pt[5], cvScalar(250,0,255),3);
+				// cvLine(_image, *pt[5], *pt[0], cvScalar(250,0,255),3);
+				 }
+				}
+			contours = contours->h_next; 
+			 }
+
+		}
+
+}
+
+
+
+/*void thr(IplImage * _image)
+{
+   
+
+
+
+   cv::Mat src = cv::cvarrToMat(_image); 
+   Mat src_gray;
+   int thresh = 10;
+  int max_thresh = 255;
+  cvtColor( src, src_gray, CV_BGR2GRAY );
+  GaussianBlur( src_gray, src_gray, Size(5,5),0,0 );
+  medianBlur( src_gray, src_gray, 1 );
+  Mat canny_output;
+  vector<vector<Point> > contours;
+  vector<Vec4i> hierarchy;
+
+  /// Detect edges using canny
+  Canny( src_gray, canny_output, thresh, thresh*2, 3 );
+  /// Find contours
+  findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+
+  /// Get the moments
+  vector<Moments> mu(contours.size() );
+  for( int i = 0; i < contours.size(); i++ )
+     { mu[i] = moments( contours[i], false ); }
+
+  ///  Get the mass centers:
+  vector<Point2f> mc( contours.size() );
+  for( int i = 0; i < contours.size(); i++ )
+     { mc[i] = Point2f( mu[i].m10/mu[i].m00 , mu[i].m01/mu[i].m00 ); }
+
+  /// Draw contours
+  Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
+  for( int i = 0; i< contours.size(); i++ )
+     {
+	   Scalar color = Scalar( 250,220,250);
+       //cvDrawContours( _image, contours, i, 250, 2, 8, hierarchy, 0, Point() );
+    //   cvCircle( _image, mc[i], 4, color, -1, 8, 0 );
+     }
+
+  /// Show in a window
+  
+  /// Calculate the area with the moments 00 and compare with the result of the OpenCV function
+
+  for( int i = 0; i< contours.size(); i++ )
+     {
+      // printf(" * Contour[%d] - Area (M_00) = %.2f - Area OpenCV: %.2f - Length: %.2f \n", i, mu[i].m00, contourArea(contours[i]), arcLength( contours[i], true ) );
+       Scalar color = Scalar( 250,0,250);
+	   //cvDrawContours( _image, contours, color, color, 0,1,8 );
+      // cvCircle( _image, mc[i], 4, color, -1, 8, 0 );
+     }
+}*/
+
+
