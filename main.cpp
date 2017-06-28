@@ -36,7 +36,7 @@ double area = fabs(cvContourArea(current));
 double perim = cvContourPerimeter(current); 
  
  
-if ( area / (perim*perim/16) > 0.7 && area / (perim*perim/16) < 1.3 ){ // в 10% интервале 
+if ( area / (perim*perim/16) > 0.99 && area / (perim*perim/16) < 1.01 ){ // в 10% интервале 
 	vals++;
 cvDrawContours(_image, current, cvScalar(0, 0, 255), cvScalar(0, 255, 0), -1, 1, 8); 
 } 
@@ -64,21 +64,22 @@ int main(int argc, char* argv[])
 
 		//cvSmooth(image, dst, CV_BILATERAL, 3, 3);
 		//cvSmooth(image, dst, CV_GAUSSIAN, 3, 3);
-		cvSmooth(image, dst, CV_MEDIAN ,3, 3 );
+		//cvSmooth(image, dst, CV_MEDIAN ,3, 3 );
+		
+			cvNamedWindow( "real", 1 ); 
+			cvShowImage( "", image);
 
-			cvNamedWindow( "final", 1 ); 
-			cvShowImage( "final", dst); 
-			//dst = cvCloneImage(image); 
-			// находим круги на изображении 
+			cvNamedWindow( "sm", 1 ); 
+			cvShowImage( "sm", dst); 
+			
 			findRectangles(dst); 
 			cvNamedWindow( "rectangles", 1 ); 
 			cvShowImage( "rectangles", dst); 
-			// ждём нажатия клавиши 
 			cvWaitKey(0);  
-			// освобождаем ресурсы 
+			
 			cvReleaseImage(&dst); 
 			cvReleaseImage(&dst); 
-			// удаляем окна 
+		
 			cvDestroyAllWindows(); 
 			return 0; 
 }
